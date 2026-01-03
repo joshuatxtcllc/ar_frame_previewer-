@@ -1,0 +1,475 @@
+import React, { useState, useRef, useEffect } from ‘react’;
+import { Camera, Upload, RotateCcw, ZoomIn, ZoomOut, Download, Share2, Ruler, AlertCircle } from ‘lucide-react’;
+
+export default function ARFramePreview() {
+const [mode, setMode] = useState(‘upload’); // ‘upload’ or ‘camera’
+const [wallImage, setWallImage] = useState(null);
+const [artworkImage, setArtworkImage] = useState(null);
+const [selectedFrame, setSelectedFrame] = useState(null);
+const [framePosition, setFramePosition] = useState({ x: 50, y: 50 });
+const [frameSize, setFrameSize] = useState({ width: 300, height: 400 });
+const [scale, setScale] = useState(1);
+const [rotation, setRotation] = useState(0);
+const [isDragging, setIsDragging] = useState(false);
+const [showMeasurements, setShowMeasurements] = useState(false);
+const [calibrationSize, setCalibrationSize] = useState(null);
+
+const canvasRef = useRef(null);
+const videoRef = useRef(null);
+const streamRef = useRef(null);
+
+// Sample frame styles
+const frameStyles = [
+{ id: 1, name: ‘Classic Black’, color: ‘#000000’, width: 40, style: ‘modern’ },
+{ id: 2, name: ‘Natural Wood’, color: ‘#8B4513’, width: 50, style: ‘rustic’ },
+{ id: 3, name: ‘White Gallery’, color: ‘#FFFFFF’, width: 35, style: ‘minimal’ },
+{ id: 4, name: ‘Gold Ornate’, color: ‘#FFD700’, width: 60, style: ‘ornate’ },
+{ id: 5, name: ‘Silver Modern’, color: ‘#C0C0C0’, width: 30, style: ‘modern’ },
+{ id: 6, name: ‘Dark Walnut’, color: ‘#3D2817’, width: 45, style: ‘traditional’ }
+];
+
+useEffect(() => {
+if (mode === ‘camera’) {
+startCamera();
+} else {
+stopCamera();
+}
+
+```
+return () => stopCamera();
+```
+
+}, [mode]);
+
+const startCamera = async () => {
+try {
+const stream = await navigator.mediaDevices.getUserMedia({
+video: { facingMode: ‘environment’, width: 1280, height: 720 }
+});
+if (videoRef.current) {
+videoRef.current.srcObject = stream;
+streamRef.current = stream;
+}
+} catch (err) {
+console.error(‘Error accessing camera:’, err);
+alert(‘Unable to access camera. Please use image upload instead.’);
+setMode(‘upload’);
+}
+};
+
+const stopCamera = () => {
+if (streamRef.current) {
+streamRef.current.getTracks().forEach(track => track.stop());
+streamRef.current = null;
+}
+};
+
+const capturePhoto = () => {
+if (!videoRef.current) return;
+
+```
+const canvas = document.createElement('canvas');
+canvas.width = videoRef.current.videoWidth;
+canvas.height = videoRef.current.videoHeight;
+const ctx = canvas.getContext('2d');
+ctx.drawImage(videoRef.current, 0, 0);
+
+canvas.toBlob(blob => {
+  const url = URL.createObjectURL(blob);
+  setWallImage(url);
+  setMode('upload');
+});
+```
+
+};
+
+const handleWallImageUpload = (e) => {
+const file = e.target.files[0];
+if (file) {
+const url = URL.createObjectURL(file);
+setWallImage(url);
+}
+};
+
+const handleArtworkUpload = (e) => {
+const file = e.target.files[0];
+if (file) {
+const url = URL.createObjectURL(file);
+setArtworkImage(url);
+
+```
+  // Analyze image dimensions
+  const img = new Image();
+  img.onload = () => {
+    const aspectRatio = img.width / img.height;
+    setFrameSize({
+      width: 300,
+      height: 300 / aspectRatio
+    });
+  };
+  img.src = url;
+}
+```
+
+};
+
+const handleFrameSelect = (frame) => {
+setSelectedFrame(frame);
+};
+
+const handleMouseDown = (e) => {
+if (!canvasRef.current) return;
+const rect = canvasRef.current.getBoundingClientRect();
+const x = ((e.clientX - rect.left) / rect.width) * 100;
+const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+```
+// Check if click is within frame bounds
+const frameLeft = framePosition.x - (frameSize.width * scale) / canvasRef.current.width * 50;
+const frameRight = framePosition.x + (frameSize.width * scale) / canvasRef.current.width * 50;
+const frameTop = framePosition.y - (frameSize.height * scale) / canvasRef.current.height * 50;
+const frameBottom = framePosition.y + (frameSize.height * scale) / canvasRef.current.height * 50;
+
+if (x >= frameLeft && x <= frameRight && y >= frameTop && y <= frameBottom) {
+  setIsDragging(true);
+}
+```
+
+};
+
+const handleMouseMove = (e) => {
+if (!isDragging || !canvasRef.current) return;
+
+```
+const rect = canvasRef.current.getBoundingClientRect();
+const x = ((e.clientX - rect.left) / rect.width) * 100;
+const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+setFramePosition({
+  x: Math.max(10, Math.min(90, x)),
+  y: Math.max(10, Math.min(90, y))
+});
+```
+
+};
+
+const handleMouseUp = () => {
+setIsDragging(false);
+};
+
+const adjustScale = (delta) => {
+setScale(prev => Math.max(0.3, Math.min(3, prev + delta)));
+};
+
+const resetView = () => {
+setFramePosition({ x: 50, y: 50 });
+setFrameSize({ width: 300, height: 400 });
+setScale(1);
+setRotation(0);
+};
+
+const downloadPreview = () => {
+if (!canvasRef.current) return;
+
+```
+const canvas = canvasRef.current;
+canvas.toBlob(blob => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'frame-preview.png';
+  a.click();
+});
+```
+
+};
+
+const calculateRealDimensions = () => {
+if (!calibrationSize) return null;
+
+```
+// If user calibrated with a known object (e.g., 8.5x11" paper)
+const pixelsPerInch = calibrationSize.pixels / calibrationSize.inches;
+const frameWidthInches = (frameSize.width * scale) / pixelsPerInch;
+const frameHeightInches = (frameSize.height * scale) / pixelsPerInch;
+
+return {
+  width: frameWidthInches.toFixed(1),
+  height: frameHeightInches.toFixed(1)
+};
+```
+
+};
+
+return (
+<div className="min-h-screen bg-gray-50 p-4">
+<div className="max-w-7xl mx-auto">
+<div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+<h1 className="text-3xl font-bold text-gray-900 mb-2">AR Frame Preview</h1>
+<p className="text-gray-600">Visualize how your framed artwork will look on your wall</p>
+</div>
+
+```
+    <div className="grid lg:grid-cols-3 gap-6">
+      {/* Main Preview Area */}
+      <div className="lg:col-span-2">
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setMode('upload')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                mode === 'upload' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+              }`}
+            >
+              <Upload className="w-4 h-4" />
+              Upload Photo
+            </button>
+            <button
+              onClick={() => setMode('camera')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                mode === 'camera' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+              }`}
+            >
+              <Camera className="w-4 h-4" />
+              Use Camera
+            </button>
+          </div>
+
+          {mode === 'upload' && !wallImage && (
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
+              <Upload className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+              <label className="cursor-pointer">
+                <span className="text-blue-600 hover:text-blue-700 font-medium">
+                  Upload a photo of your wall
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleWallImageUpload}
+                  className="hidden"
+                />
+              </label>
+              <p className="text-gray-500 text-sm mt-2">
+                Take a straight-on photo of the wall where you want to hang your frame
+              </p>
+            </div>
+          )}
+
+          {mode === 'camera' && (
+            <div className="relative">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="w-full rounded-lg"
+              />
+              <button
+                onClick={capturePhoto}
+                className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-4 rounded-full shadow-lg hover:bg-gray-100"
+              >
+                <Camera className="w-6 h-6 text-gray-700" />
+              </button>
+            </div>
+          )}
+
+          {wallImage && (
+            <div className="relative">
+              <div
+                ref={canvasRef}
+                className="relative w-full aspect-video bg-gray-100 rounded-lg overflow-hidden cursor-move"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                style={{
+                  backgroundImage: `url(${wallImage})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center'
+                }}
+              >
+                {artworkImage && selectedFrame && (
+                  <div
+                    className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-move shadow-2xl"
+                    style={{
+                      left: `${framePosition.x}%`,
+                      top: `${framePosition.y}%`,
+                      width: `${frameSize.width * scale}px`,
+                      height: `${frameSize.height * scale}px`,
+                      transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+                      boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+                    }}
+                  >
+                    {/* Frame Border */}
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        border: `${selectedFrame.width}px solid ${selectedFrame.color}`,
+                        boxShadow: selectedFrame.style === 'ornate' 
+                          ? 'inset 0 0 20px rgba(0,0,0,0.3)' 
+                          : 'inset 0 0 10px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      {/* Mat (optional) */}
+                      <div className="absolute inset-2 bg-white" style={{
+                        padding: `${selectedFrame.width * 0.5}px`
+                      }}>
+                        {/* Artwork */}
+                        <img
+                          src={artworkImage}
+                          alt="Artwork preview"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    </div>
+                    
+                    {showMeasurements && (
+                      <div className="absolute -top-8 left-0 bg-black bg-opacity-75 text-white px-2 py-1 rounded text-xs">
+                        {calculateRealDimensions() 
+                          ? `${calculateRealDimensions().width}" × ${calculateRealDimensions().height}"`
+                          : 'Calibrate for real dimensions'}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {!artworkImage && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="text-white text-center">
+                      <AlertCircle className="w-12 h-12 mx-auto mb-2" />
+                      <p>Upload your artwork to see preview</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Controls */}
+              <div className="flex gap-2 mt-4 flex-wrap">
+                <button
+                  onClick={() => adjustScale(0.1)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                  Larger
+                </button>
+                <button
+                  onClick={() => adjustScale(-0.1)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                  Smaller
+                </button>
+                <button
+                  onClick={() => setRotation(prev => prev - 5)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Rotate
+                </button>
+                <button
+                  onClick={() => setShowMeasurements(!showMeasurements)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                >
+                  <Ruler className="w-4 h-4" />
+                  Measure
+                </button>
+                <button
+                  onClick={resetView}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                >
+                  Reset
+                </button>
+                <button
+                  onClick={downloadPreview}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <Download className="w-4 h-4" />
+                  Save
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Side Panel */}
+      <div className="space-y-6">
+        {/* Artwork Upload */}
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h3 className="text-lg font-semibold mb-4">Your Artwork</h3>
+          {!artworkImage ? (
+            <label className="block cursor-pointer">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition">
+                <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                <span className="text-sm text-gray-600">Upload Artwork</span>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleArtworkUpload}
+                className="hidden"
+              />
+            </label>
+          ) : (
+            <div className="space-y-3">
+              <img src={artworkImage} alt="Artwork" className="w-full rounded-lg shadow" />
+              <label className="block">
+                <span className="text-sm text-gray-600 block mb-1">Change Artwork</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleArtworkUpload}
+                  className="text-sm"
+                />
+              </label>
+            </div>
+          )}
+        </div>
+
+        {/* Frame Selection */}
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h3 className="text-lg font-semibold mb-4">Choose Frame Style</h3>
+          <div className="space-y-2">
+            {frameStyles.map(frame => (
+              <button
+                key={frame.id}
+                onClick={() => handleFrameSelect(frame)}
+                className={`w-full p-3 rounded-lg border-2 flex items-center gap-3 transition ${
+                  selectedFrame?.id === frame.id
+                    ? 'border-blue-600 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div
+                  className="w-12 h-12 rounded border-4 flex-shrink-0"
+                  style={{
+                    borderColor: frame.color,
+                    backgroundColor: '#f9f9f9'
+                  }}
+                />
+                <div className="text-left flex-1">
+                  <div className="font-medium">{frame.name}</div>
+                  <div className="text-sm text-gray-500">{frame.style}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tips */}
+        <div className="bg-blue-50 rounded-lg p-4">
+          <h4 className="font-semibold text-blue-900 mb-2">💡 Tips for Best Results</h4>
+          <ul className="text-sm text-blue-800 space-y-1">
+            <li>• Take photos straight-on, not at an angle</li>
+            <li>• Ensure good lighting on your wall</li>
+            <li>• Use a reference object for scale</li>
+            <li>• Drag the frame to reposition it</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+);
+}
