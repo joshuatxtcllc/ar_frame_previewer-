@@ -18,9 +18,7 @@ medium: { maxTime: 6, priority: 2 },
 complex: { maxTime: 24, priority: 1 }
 };
 
-```
 this.initializeScheduler();
-```
 
 }
 
@@ -30,12 +28,10 @@ cron.schedule(‘0 * * * *’, () => {
 this.optimizeSchedule();
 });
 
-```
 // Daily workload assessment at 6 AM
 cron.schedule('0 6 * * *', () => {
   this.assessDailyWorkload();
 });
-```
 
 }
 
@@ -51,7 +47,6 @@ dependencies = [],
 customerPreferences = {}
 } = orderData;
 
-```
   // Calculate complexity score
   const complexityScore = this.calculateComplexityScore(orderData);
   
@@ -102,7 +97,6 @@ customerPreferences = {}
   console.error('Error scheduling order:', error);
   throw error;
 }
-```
 
 }
 
@@ -110,7 +104,6 @@ async findOptimalTimeSlot({ duration, complexity, deadline, dependencies, custom
 const now = moment().tz(this.timezone);
 const deadlineDate = moment(deadline).tz(this.timezone);
 
-```
 // Get existing scheduled tasks
 const existingTasks = await this.db('scheduled_tasks')
   .where('status', 'scheduled')
@@ -139,7 +132,6 @@ for (let day = 0; day < maxSearchDays; day++) {
 }
 
 return null;
-```
 
 }
 
@@ -150,7 +142,6 @@ const dayStart = date.clone().hour(parseInt(this.workingHours.start.split(’:�
 const dayEnd = date.clone().hour(parseInt(this.workingHours.end.split(’:’)[0]))
 .minute(parseInt(this.workingHours.end.split(’:’)[1]));
 
-```
 // Get tasks for this day
 const dayTasks = existingTasks.filter(task => 
   moment(task.startTime).isSame(date, 'day')
@@ -184,14 +175,12 @@ if (currentTime.clone().add(duration, 'hours').isBefore(dayEnd)) {
 }
 
 return slots;
-```
 
 }
 
 isSlotSuitable(slot, criteria) {
 const { complexity, deadline, dependencies, customerPreferences } = criteria;
 
-```
 // Check deadline constraint
 if (slot.end.isAfter(deadline)) {
   return false;
@@ -211,14 +200,12 @@ if (customerPreferences.preferredTimeSlots) {
 }
 
 return true;
-```
 
 }
 
 calculateComplexityScore(orderData) {
 let score = 0;
 
-```
 // Base complexity from estimated hours
 if (orderData.estimatedHours <= 2) score += 1;
 else if (orderData.estimatedHours <= 6) score += 3;
@@ -235,7 +222,6 @@ if (orderData.artworkPrep) score += 1;
 score *= (orderData.priority || 1);
 
 return Math.min(score, 10); // Cap at 10
-```
 
 }
 
@@ -247,7 +233,6 @@ const upcomingTasks = await this.db(‘scheduled_tasks’)
 .where(‘status’, ‘scheduled’)
 .orderBy(‘startTime’, ‘asc’);
 
-```
   // Group tasks by complexity and priority
   const taskGroups = this.groupTasksForOptimization(upcomingTasks);
   
@@ -260,7 +245,6 @@ const upcomingTasks = await this.db(‘scheduled_tasks’)
 } catch (error) {
   console.error('Schedule optimization error:', error);
 }
-```
 
 }
 
@@ -271,7 +255,6 @@ medium: [],
 simple: []
 };
 
-```
 tasks.forEach(task => {
   if (task.complexity >= 7) groups.complex.push(task);
   else if (task.complexity >= 4) groups.medium.push(task);
@@ -279,7 +262,6 @@ tasks.forEach(task => {
 });
 
 return [groups.complex, groups.medium, groups.simple];
-```
 
 }
 
@@ -290,7 +272,6 @@ if (a.priority !== b.priority) return a.priority - b.priority;
 return moment(a.deadline).diff(moment(b.deadline));
 });
 
-```
 // Try to group similar tasks together for efficiency
 for (let i = 0; i < tasks.length - 1; i++) {
   const currentTask = tasks[i];
@@ -300,7 +281,6 @@ for (let i = 0; i < tasks.length - 1; i++) {
     await this.combineScheduledTasks(currentTask, nextTask);
   }
 }
-```
 
 }
 
@@ -313,11 +293,9 @@ return timeDiff <= 2 && task1.complexity === task2.complexity;
 async detectAndResolveConflicts() {
 const conflicts = await this.db.raw(`SELECT t1.*, t2.orderId as conflictOrderId FROM scheduled_tasks t1 JOIN scheduled_tasks t2 ON t1.id != t2.id WHERE t1.status IN ('scheduled', 'in_progress') AND t2.status IN ('scheduled', 'in_progress') AND ( (t1.startTime <= t2.startTime AND t1.endTime > t2.startTime) OR (t2.startTime <= t1.startTime AND t2.endTime > t1.startTime) )`);
 
-```
 for (const conflict of conflicts[0]) {
   await this.resolveConflict(conflict);
 }
-```
 
 }
 
@@ -327,7 +305,6 @@ const conflictingTasks = await this.db(‘scheduled_tasks’)
 .whereIn(‘orderId’, [conflict.orderId, conflict.conflictOrderId])
 .orderBy(‘priority’, ‘asc’);
 
-```
 const taskToReschedule = conflictingTasks[1]; // Lower priority
 
 // Find new time slot
@@ -353,7 +330,6 @@ if (newSlot) {
     newSlot 
   });
 }
-```
 
 }
 
@@ -361,7 +337,6 @@ async assessDailyWorkload() {
 const today = moment().tz(this.timezone).startOf(‘day’);
 const tomorrow = today.clone().add(1, ‘day’);
 
-```
 const todayTasks = await this.db('scheduled_tasks')
   .whereBetween('startTime', [today.toISOString(), tomorrow.toISOString()])
   .where('status', 'scheduled');
@@ -383,7 +358,6 @@ await this.db('daily_workload_assessments').insert(workloadAssessment);
 this.emit('dailyWorkloadAssessed', workloadAssessment);
 
 return workloadAssessment;
-```
 
 }
 
@@ -413,23 +387,19 @@ status,
 updatedAt: moment().toISOString()
 });
 
-```
 // Update order status
 await this.db('orders')
   .where('id', orderId)
   .update({ status });
 
 this.emit('taskProgressUpdated', { orderId, actualHours, status });
-```
 
 }
 
 async getScheduleAnalytics(startDate, endDate) {
 const analytics = await this.db.raw(`SELECT  DATE(startTime) as date, COUNT(*) as scheduled_tasks, SUM(estimatedHours) as estimated_hours, SUM(actualHours) as actual_hours, AVG(complexity) as avg_complexity, COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tasks, COUNT(CASE WHEN status = 'delayed' THEN 1 END) as delayed_tasks FROM scheduled_tasks  WHERE DATE(startTime) BETWEEN ? AND ? GROUP BY DATE(startTime) ORDER BY date DESC`, [startDate, endDate]);
 
-```
 return analytics[0];
-```
 
 }
 }

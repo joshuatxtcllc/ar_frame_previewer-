@@ -9,7 +9,6 @@ super();
 this.db = database;
 this.timezone = config.timezone || ‘America/Chicago’;
 
-```
 // Reward tiers and rules
 this.rewardTiers = {
   bronze: { minReferrals: 1, bonusMultiplier: 1.0, perks: ['5% discount'] },
@@ -38,7 +37,6 @@ this.milestoneRewards = {
   10: { type: 'credit', amount: 500, bonus: 'platinum_tier' },
   25: { type: 'free_service', amount: 100, bonus: 'vip_status' }
 };
-```
 
 }
 
@@ -50,7 +48,6 @@ const existingCode = await this.db(‘referral_codes’)
 .where(‘status’, ‘active’)
 .first();
 
-```
   if (existingCode) {
     return existingCode;
   }
@@ -89,7 +86,6 @@ const existingCode = await this.db(‘referral_codes’)
   console.error('Error generating referral code:', error);
   throw error;
 }
-```
 
 }
 
@@ -101,9 +97,7 @@ const hash = crypto.createHash(‘md5’)
 .substring(0, 6)
 .toUpperCase();
 
-```
 return `JF${hash}`; // Jay's Frames + unique hash
-```
 
 }
 
@@ -115,7 +109,6 @@ const codeRecord = await this.db(‘referral_codes’)
 .where(‘status’, ‘active’)
 .first();
 
-```
   if (!codeRecord) {
     throw new Error('Invalid or inactive referral code');
   }
@@ -212,7 +205,6 @@ const codeRecord = await this.db(‘referral_codes’)
   console.error('Error processing referral:', error);
   throw error;
 }
-```
 
 }
 
@@ -221,13 +213,11 @@ async calculateReferrerReward(referrerCustomerId) {
 const referrerStats = await this.getReferrerStats(referrerCustomerId);
 const currentTier = this.determineCustomerTier(referrerStats.successfulReferrals);
 
-```
 const baseReward = { ...this.baseRewards.referrer };
 baseReward.amount = Math.round(baseReward.amount * this.rewardTiers[currentTier].bonusMultiplier);
 baseReward.tier = currentTier;
 
 return baseReward;
-```
 
 }
 
@@ -238,7 +228,6 @@ return { …this.baseRewards.referee };
 async createPendingRewards(referral) {
 const rewards = JSON.parse(referral.rewards);
 
-```
 // Referrer reward
 await this.db('customer_rewards').insert({
   id: require('uuid').v4(),
@@ -264,7 +253,6 @@ await this.db('customer_rewards').insert({
   expiresAt: moment().add(90, 'days').toISOString(), // 90 days to use
   createdAt: moment().toISOString()
 });
-```
 
 }
 
@@ -274,7 +262,6 @@ const referral = await this.db(‘referrals’)
 .where(‘id’, referralId)
 .first();
 
-```
   if (!referral) {
     throw new Error('Referral not found');
   }
@@ -320,7 +307,6 @@ const referral = await this.db(‘referrals’)
   console.error('Error completing referral:', error);
   throw error;
 }
-```
 
 }
 
@@ -328,7 +314,6 @@ async checkMilestoneRewards(customerId) {
 const stats = await this.getReferrerStats(customerId);
 const milestones = Object.keys(this.milestoneRewards).map(Number).sort((a, b) => a - b);
 
-```
 for (const milestone of milestones) {
   if (stats.successfulReferrals >= milestone) {
     // Check if milestone reward already given
@@ -362,14 +347,12 @@ for (const milestone of milestones) {
     }
   }
 }
-```
 
 }
 
 async updateReferrerStats(customerId) {
 const stats = await this.getReferrerStats(customerId);
 
-```
 await this.db('customer_referral_stats')
   .insert({
     customerId,
@@ -382,14 +365,12 @@ await this.db('customer_referral_stats')
   })
   .onConflict('customerId')
   .merge();
-```
 
 }
 
 async getReferrerStats(customerId) {
 const referralStats = await this.db.raw(`SELECT  COUNT(*) as totalReferrals, COUNT(CASE WHEN status = 'completed' THEN 1 END) as successfulReferrals, COUNT(CASE WHEN status = 'pending' THEN 1 END) as pendingReferrals FROM referrals  WHERE referrerCustomerId = ?`, [customerId]);
 
-```
 const rewardStats = await this.db.raw(`
   SELECT 
     COALESCE(SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END), 0) as totalCredits,
@@ -404,7 +385,6 @@ return {
   ...rewardStats[0][0],
   totalRewardsEarned: rewardStats[0][0].totalCredits
 };
-```
 
 }
 
@@ -426,14 +406,12 @@ this.whereNull(‘expiresAt’)
 })
 .orderBy(‘createdAt’, ‘desc’);
 
-```
 return rewards.map(reward => ({
   ...reward,
   formattedAmount: this.formatRewardAmount(reward),
   timeUntilExpiry: reward.expiresAt ? 
     moment(reward.expiresAt).fromNow() : null
 }));
-```
 
 }
 
@@ -458,7 +436,6 @@ const reward = await this.db(‘customer_rewards’)
 .where(‘status’, ‘active’)
 .first();
 
-```
   if (!reward) {
     throw new Error('Reward not found or not active');
   }
@@ -500,14 +477,12 @@ const reward = await this.db(‘customer_rewards’)
   console.error('Error applying reward:', error);
   throw error;
 }
-```
 
 }
 
 async getReferralAnalytics(startDate, endDate) {
 const analytics = await this.db.raw(`SELECT  DATE(referralDate) as date, COUNT(*) as total_referrals, COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_referrals, COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_referrals, AVG(CASE WHEN completedAt IS NOT NULL  THEN DATEDIFF(completedAt, referralDate)  ELSE NULL END) as avg_days_to_complete FROM referrals  WHERE DATE(referralDate) BETWEEN ? AND ? GROUP BY DATE(referralDate) ORDER BY date DESC`, [startDate, endDate]);
 
-```
 const rewardAnalytics = await this.db.raw(`
   SELECT 
     type,
@@ -543,7 +518,6 @@ return {
   rewardBreakdown: rewardAnalytics[0],
   topReferrers: topReferrers[0]
 };
-```
 
 }
 
@@ -552,7 +526,6 @@ const expiredRewards = await this.db(‘customer_rewards’)
 .where(‘status’, ‘active’)
 .where(‘expiresAt’, ‘<’, moment().toISOString());
 
-```
 for (const reward of expiredRewards) {
   await this.db('customer_rewards')
     .where('id', reward.id)
@@ -565,7 +538,6 @@ for (const reward of expiredRewards) {
 }
 
 return expiredRewards.length;
-```
 
 }
 }

@@ -11,7 +11,6 @@ super();
 this.db = database;
 this.timezone = config.timezone || ‘America/Chicago’;
 
-```
 // Feature weights for recommendation algorithm
 this.featureWeights = {
   frameStyle: 0.25,
@@ -35,7 +34,6 @@ this.behaviorPatterns = {
 
 this.model = null;
 this.isModelTrained = false;
-```
 
 }
 
@@ -46,7 +44,6 @@ const orders = await this.db(‘orders’)
 .where(‘customerId’, customerId)
 .orderBy(‘createdAt’, ‘desc’);
 
-```
   if (orders.length === 0) {
     return this.getNewCustomerProfile(customerId);
   }
@@ -90,14 +87,12 @@ const orders = await this.db(‘orders’)
   console.error('Error analyzing customer behavior:', error);
   throw error;
 }
-```
 
 }
 
 calculateOrderFrequency(orders) {
 if (orders.length < 2) return { frequency: ‘new’, ordersPerYear: 0 };
 
-```
 const firstOrder = moment(orders[orders.length - 1].createdAt);
 const lastOrder = moment(orders[0].createdAt);
 const daysBetween = lastOrder.diff(firstOrder, 'days');
@@ -116,7 +111,6 @@ return {
   daysSinceLastOrder: moment().diff(lastOrder, 'days'),
   avgDaysBetweenOrders: Math.round(daysBetween / (orders.length - 1))
 };
-```
 
 }
 
@@ -136,7 +130,6 @@ const styles = {};
 const colors = {};
 const matStyles = {};
 
-```
 for (const order of orders) {
   const details = await this.db('order_details')
     .where('orderId', order.id)
@@ -165,7 +158,6 @@ return {
   colorDistribution: colors,
   matDistribution: matStyles
 };
-```
 
 }
 
@@ -173,14 +165,12 @@ getTopPreference(distribution) {
 const entries = Object.entries(distribution);
 if (entries.length === 0) return null;
 
-```
 entries.sort((a, b) => b[1] - a[1]);
 return {
   value: entries[0][0],
   count: entries[0][1],
   percentage: Math.round((entries[0][1] / entries.reduce((sum, [, count]) => sum + count, 0)) * 100)
 };
-```
 
 }
 
@@ -188,18 +178,15 @@ calculatePriceRange(orders) {
 const values = orders.map(o => parseFloat(o.totalAmount));
 const avg = ss.mean(values);
 
-```
 if (avg >= 300) return 'premium';
 if (avg >= 150) return 'mid-range';
 return 'budget';
-```
 
 }
 
 detectSeasonalTrends(orders) {
 const monthlyOrders = {};
 
-```
 orders.forEach(order => {
   const month = moment(order.createdAt).format('MM');
   monthlyOrders[month] = (monthlyOrders[month] || 0) + 1;
@@ -218,7 +205,6 @@ return {
   monthlyDistribution: monthlyOrders,
   hasClearPattern: sortedMonths.length > 0 && sortedMonths[0][1] >= 3
 };
-```
 
 }
 
@@ -228,7 +214,6 @@ const inquiries = await this.db(‘customer_inquiries’)
 .where(‘customerId’, customerId)
 .orderBy(‘createdAt’, ‘desc’);
 
-```
 if (inquiries.length === 0) return null;
 
 const decisionTimes = [];
@@ -253,14 +238,12 @@ return {
   speed: avgDecisionTime <= 3 ? 'fast' : avgDecisionTime <= 7 ? 'moderate' : 'slow',
   conversionRate: (decisionTimes.length / inquiries.length) * 100
 };
-```
 
 }
 
 calculateLoyaltyScore(orders) {
 if (orders.length === 0) return 0;
 
-```
 const factors = {
   orderCount: Math.min(orders.length / 10, 1) * 30, // Max 30 points
   recency: this.calculateRecencyScore(orders) * 25, // Max 25 points
@@ -275,27 +258,23 @@ return {
   factors,
   tier: this.getLoyaltyTier(totalScore)
 };
-```
 
 }
 
 calculateRecencyScore(orders) {
 const daysSinceLastOrder = moment().diff(moment(orders[0].createdAt), ‘days’);
 
-```
 if (daysSinceLastOrder <= 30) return 1.0;
 if (daysSinceLastOrder <= 90) return 0.8;
 if (daysSinceLastOrder <= 180) return 0.5;
 if (daysSinceLastOrder <= 365) return 0.3;
 return 0.1;
-```
 
 }
 
 calculateConsistencyScore(orders) {
 if (orders.length < 3) return 0.5;
 
-```
 const intervals = [];
 for (let i = 0; i < orders.length - 1; i++) {
   const days = moment(orders[i].createdAt).diff(moment(orders[i + 1].createdAt), 'days');
@@ -309,7 +288,6 @@ if (cv <= 0.3) return 1.0;
 if (cv <= 0.5) return 0.8;
 if (cv <= 0.7) return 0.6;
 return 0.4;
-```
 
 }
 
@@ -324,7 +302,6 @@ return ‘at_risk’;
 extractArtworkTypePreferences(orders) {
 const types = {};
 
-```
 orders.forEach(order => {
   const type = order.artworkType || 'unknown';
   types[type] = (types[type] || 0) + 1;
@@ -335,14 +312,12 @@ return {
   primary: this.getTopPreference(types),
   diversity: Object.keys(types).length
 };
-```
 
 }
 
 classifyCustomerSegment(patterns) {
 const segments = [];
 
-```
 // Frequency-based segments
 if (patterns.orderFrequency.frequency === 'very_frequent' || 
     patterns.orderFrequency.frequency === 'frequent') {
@@ -375,7 +350,6 @@ if (patterns.orderFrequency.daysSinceLastOrder > 365) {
 }
 
 return segments;
-```
 
 }
 
@@ -384,7 +358,6 @@ const totalRevenue = orders.reduce((sum, o) => sum + parseFloat(o.totalAmount), 
 const avgOrderValue = patterns.averageOrderValue.average;
 const ordersPerYear = patterns.orderFrequency.ordersPerYear;
 
-```
 // Predict customer lifespan based on loyalty
 const predictedLifespanYears = this.predictCustomerLifespan(patterns.brandLoyalty.tier);
 
@@ -398,7 +371,6 @@ return {
   projectedOrdersPerYear: ordersPerYear,
   predictedLifespanYears
 };
-```
 
 }
 
@@ -418,7 +390,6 @@ if (patterns.orderFrequency.ordersPerYear === 0) {
 return null;
 }
 
-```
 const avgDaysBetween = patterns.orderFrequency.avgDaysBetweenOrders;
 const daysSinceLastOrder = patterns.orderFrequency.daysSinceLastOrder;
 
@@ -443,7 +414,6 @@ return {
   characteristics: predictedCharacteristics,
   confidence: this.calculatePredictionConfidence(patterns)
 };
-```
 
 }
 
@@ -452,7 +422,6 @@ calculatePurchaseProbability(daysSince, expectedDays) {
 const variance = expectedDays * 0.3; // 30% variance
 const z = (daysSince - expectedDays) / variance;
 
-```
 // Using simplified normal distribution
 let probability = Math.exp(-0.5 * z * z);
 
@@ -462,14 +431,12 @@ if (daysSince >= expectedDays * 0.8 && daysSince <= expectedDays * 1.2) {
 }
 
 return Math.min(probability, 1.0);
-```
 
 }
 
 calculatePredictionConfidence(patterns) {
 let confidence = 0;
 
-```
 // More orders = higher confidence
 if (patterns.orderFrequency.totalOrders >= 10) confidence += 30;
 else if (patterns.orderFrequency.totalOrders >= 5) confidence += 20;
@@ -489,7 +456,6 @@ else if (patterns.orderFrequency.daysSinceLastOrder <= 180) confidence += 15;
 else if (patterns.orderFrequency.daysSinceLastOrder <= 365) confidence += 5;
 
 return Math.min(confidence, 100);
-```
 
 }
 
@@ -497,7 +463,6 @@ async generateRecommendations(customerId, context = {}) {
 try {
 const behaviorProfile = await this.analyzeCustomerBehavior(customerId);
 
-```
   // Get all available products/frames
   const availableFrames = await this.db('frames')
     .where('status', 'active')
@@ -540,14 +505,12 @@ const behaviorProfile = await this.analyzeCustomerBehavior(customerId);
   console.error('Error generating recommendations:', error);
   throw error;
 }
-```
 
 }
 
 calculateRecommendationScore(frame, behaviorProfile, context) {
 let score = 50; // Base score
 
-```
 const patterns = behaviorProfile.patterns;
 
 // Style match
@@ -586,7 +549,6 @@ if (patterns.preferredStyles.favoriteFrameStyle?.value !== frame.style &&
 }
 
 return score;
-```
 
 }
 
@@ -599,7 +561,6 @@ generateRecommendationReasons(frame, behaviorProfile) {
 const reasons = [];
 const patterns = behaviorProfile.patterns;
 
-```
 if (patterns.preferredStyles.favoriteFrameStyle?.value === frame.style) {
   reasons.push(`Matches your preferred ${frame.style} style`);
 }
@@ -627,7 +588,6 @@ if (reasons.length === 0) {
 }
 
 return reasons;
-```
 
 }
 
@@ -661,7 +621,6 @@ nextPurchasePrediction: null
 async getBehaviorInsights(customerId) {
 const profile = await this.analyzeCustomerBehavior(customerId);
 
-```
 const insights = [];
 
 // Generate actionable insights
@@ -697,7 +656,6 @@ return {
   insights,
   profile
 };
-```
 
 }
 }

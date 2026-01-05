@@ -29,7 +29,6 @@ const startDate = preferredDate ?
 moment(preferredDate).tz(this.timezone) :
 moment().tz(this.timezone).add(1, ‘day’);
 
-```
   const endDate = startDate.clone().add(daysAhead, 'days');
   const appointmentConfig = this.appointmentTypes[appointmentType];
   
@@ -59,7 +58,6 @@ moment().tz(this.timezone).add(1, ‘day’);
   console.error('Error getting available slots:', error);
   throw error;
 }
-```
 
 }
 
@@ -69,7 +67,6 @@ const dayEnd = date.clone().hour(17).minute(0);  // 5 PM
 const slotDuration = appointmentConfig.duration * 60; // Convert to minutes
 const bufferTime = appointmentConfig.bufferTime;
 
-```
 // Get existing appointments for the day
 const existingAppointments = await this.db('appointments')
   .whereBetween('appointmentTime', [
@@ -136,7 +133,6 @@ while (currentTime.clone().add(slotDuration + bufferTime, 'minutes').isBefore(da
 }
 
 return slots;
-```
 
 }
 
@@ -144,7 +140,6 @@ async calculateDayWorkload(date) {
 const dayStart = date.clone().startOf(‘day’);
 const dayEnd = date.clone().endOf(‘day’);
 
-```
 // Get scheduled production tasks
 const tasks = await this.db('scheduled_tasks')
   .whereBetween('startTime', [dayStart.toISOString(), dayEnd.toISOString()])
@@ -173,7 +168,6 @@ return {
   taskCount: tasks.length,
   appointmentCount: appointments.length
 };
-```
 
 }
 
@@ -187,7 +181,6 @@ return ‘overloaded’;
 calculateRecommendationScore(datetime, workload, appointmentConfig) {
 let score = 100;
 
-```
 // Penalize high workload days
 if (workload.utilization > 0.8) score -= 30;
 else if (workload.utilization > 0.6) score -= 10;
@@ -209,7 +202,6 @@ if (dayOfWeek === 1 || dayOfWeek === 5) score += 5; // Monday/Friday slight bonu
 if (dayOfWeek === 3) score += 10; // Wednesday bonus (midweek)
 
 return Math.max(0, Math.min(100, score));
-```
 
 }
 
@@ -259,7 +251,6 @@ contactMethod = ‘email’,
 reminderPreferences = { hours: [24, 2] }
 } = appointmentData;
 
-```
   const appointmentTime = moment(datetime).tz(this.timezone);
   const appointmentEnd = appointmentTime.clone().add(
     this.appointmentTypes[type].duration * 60, 
@@ -315,7 +306,6 @@ reminderPreferences = { hours: [24, 2] }
   console.error('Error booking appointment:', error);
   throw error;
 }
-```
 
 }
 
@@ -323,7 +313,6 @@ async scheduleAppointmentReminders(appointment) {
 const reminderPrefs = JSON.parse(appointment.reminderPreferences);
 const appointmentTime = moment(appointment.appointmentTime);
 
-```
 for (const hours of reminderPrefs.hours) {
   const reminderTime = appointmentTime.clone().subtract(hours, 'hours');
   
@@ -340,7 +329,6 @@ for (const hours of reminderPrefs.hours) {
     });
   }
 }
-```
 
 }
 
@@ -370,7 +358,6 @@ recommendation: workload.utilization > 0.9 ?
 async updateWorkloadCache(date) {
 const workload = await this.calculateDayWorkload(moment(date));
 
-```
 await this.db('daily_workload_cache')
   .insert({
     date,
@@ -379,7 +366,6 @@ await this.db('daily_workload_cache')
   })
   .onConflict('date')
   .merge();
-```
 
 }
 
@@ -389,7 +375,6 @@ const appointment = await this.db(‘appointments’)
 .where(‘id’, appointmentId)
 .first();
 
-```
   if (!appointment) {
     throw new Error('Appointment not found');
   }
@@ -447,14 +432,12 @@ const appointment = await this.db(‘appointments’)
   console.error('Error rescheduling appointment:', error);
   throw error;
 }
-```
 
 }
 
 async getAppointmentAnalytics(startDate, endDate) {
 const analytics = await this.db.raw(`SELECT  DATE(appointmentTime) as date, type, COUNT(*) as total_appointments, COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed, COUNT(CASE WHEN status = 'no_show' THEN 1 END) as no_shows, COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled, AVG(duration) as avg_duration FROM appointments  WHERE DATE(appointmentTime) BETWEEN ? AND ? GROUP BY DATE(appointmentTime), type ORDER BY date DESC, type`, [startDate, endDate]);
 
-```
 const workloadAnalytics = await this.db.raw(`
   SELECT 
     date,
@@ -471,14 +454,12 @@ return {
   appointments: analytics[0],
   workload: workloadAnalytics[0]
 };
-```
 
 }
 
 async getOptimalAppointmentTimes(appointmentType, nextDays = 7) {
 const slots = await this.getAvailableSlots(appointmentType, null, nextDays);
 
-```
 return slots
   .filter(slot => slot.isRecommended)
   .slice(0, 10) // Top 10 recommendations
@@ -489,14 +470,12 @@ return slots
     recommendationScore: slot.recommendationScore,
     benefits: this.getSlotBenefits(slot)
   }));
-```
 
 }
 
 getSlotBenefits(slot) {
 const benefits = [];
 
-```
 if (slot.workloadLevel === 'light') {
   benefits.push('More attention and time available');
 }
@@ -508,7 +487,6 @@ if (slot.workloadScore < 0.5) {
 }
 
 return benefits;
-```
 
 }
 }
