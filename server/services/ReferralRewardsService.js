@@ -1,13 +1,13 @@
 // server/services/ReferralRewardsService.js
-const moment = require(‘moment-timezone’);
-const crypto = require(‘crypto’);
-const { EventEmitter } = require(‘events’);
+const moment = require('moment-timezone');
+const crypto = require('crypto');
+const { EventEmitter } = require('events');
 
 class ReferralRewardsService extends EventEmitter {
 constructor(database, config = {}) {
 super();
 this.db = database;
-this.timezone = config.timezone || ‘America/Chicago’;
+this.timezone = config.timezone || 'America/Chicago';
 
 // Reward tiers and rules
 this.rewardTiers = {
@@ -43,9 +43,9 @@ this.milestoneRewards = {
 async generateReferralCode(customerId, customCode = null) {
 try {
 // Check if customer already has an active referral code
-const existingCode = await this.db(‘referral_codes’)
-.where(‘customerId’, customerId)
-.where(‘status’, ‘active’)
+const existingCode = await this.db('referral_codes')
+.where('customerId', customerId)
+.where('status', 'active')
 .first();
 
   if (existingCode) {
@@ -91,9 +91,9 @@ const existingCode = await this.db(‘referral_codes’)
 
 createReferralCode(customerId) {
 // Get customer info for personalization
-const hash = crypto.createHash(‘md5’)
+const hash = crypto.createHash('md5')
 .update(customerId + Date.now().toString())
-.digest(‘hex’)
+.digest('hex')
 .substring(0, 6)
 .toUpperCase();
 
@@ -104,9 +104,9 @@ return `JF${hash}`; // Jay's Frames + unique hash
 async processReferral(referralCode, newCustomerData) {
 try {
 // Validate referral code
-const codeRecord = await this.db(‘referral_codes’)
-.where(‘code’, referralCode)
-.where(‘status’, ‘active’)
+const codeRecord = await this.db('referral_codes')
+.where('code', referralCode)
+.where('status', 'active')
 .first();
 
   if (!codeRecord) {
@@ -209,7 +209,7 @@ const codeRecord = await this.db(‘referral_codes’)
 }
 
 async calculateReferrerReward(referrerCustomerId) {
-// Get referrer’s current tier and stats
+// Get referrer's current tier and stats
 const referrerStats = await this.getReferrerStats(referrerCustomerId);
 const currentTier = this.determineCustomerTier(referrerStats.successfulReferrals);
 
@@ -222,7 +222,7 @@ return baseReward;
 }
 
 async calculateRefereeReward() {
-return { …this.baseRewards.referee };
+return { ...this.baseRewards.referee };
 }
 
 async createPendingRewards(referral) {
@@ -258,8 +258,8 @@ await this.db('customer_rewards').insert({
 
 async completeReferral(referralId, firstOrderId) {
 try {
-const referral = await this.db(‘referrals’)
-.where(‘id’, referralId)
+const referral = await this.db('referrals')
+.where('id', referralId)
 .first();
 
   if (!referral) {
@@ -389,22 +389,22 @@ return {
 }
 
 determineCustomerTier(successfulReferrals) {
-if (successfulReferrals >= this.rewardTiers.platinum.minReferrals) return ‘platinum’;
-if (successfulReferrals >= this.rewardTiers.gold.minReferrals) return ‘gold’;
-if (successfulReferrals >= this.rewardTiers.silver.minReferrals) return ‘silver’;
-if (successfulReferrals >= this.rewardTiers.bronze.minReferrals) return ‘bronze’;
-return ‘none’;
+if (successfulReferrals >= this.rewardTiers.platinum.minReferrals) return 'platinum';
+if (successfulReferrals >= this.rewardTiers.gold.minReferrals) return 'gold';
+if (successfulReferrals >= this.rewardTiers.silver.minReferrals) return 'silver';
+if (successfulReferrals >= this.rewardTiers.bronze.minReferrals) return 'bronze';
+return 'none';
 }
 
-async getCustomerRewards(customerId, status = ‘active’) {
-const rewards = await this.db(‘customer_rewards’)
-.where(‘customerId’, customerId)
-.where(‘status’, status)
+async getCustomerRewards(customerId, status = 'active') {
+const rewards = await this.db('customer_rewards')
+.where('customerId', customerId)
+.where('status', status)
 .where(function() {
-this.whereNull(‘expiresAt’)
-.orWhere(‘expiresAt’, ‘>’, moment().toISOString());
+this.whereNull('expiresAt')
+.orWhere('expiresAt', '>', moment().toISOString());
 })
-.orderBy(‘createdAt’, ‘desc’);
+.orderBy('createdAt', 'desc');
 
 return rewards.map(reward => ({
   ...reward,
@@ -417,11 +417,11 @@ return rewards.map(reward => ({
 
 formatRewardAmount(reward) {
 switch (reward.type) {
-case ‘credit’:
+case 'credit':
 return `$${reward.amount}`;
-case ‘percentage_discount’:
+case 'percentage_discount':
 return `${reward.amount}%`;
-case ‘fixed_discount’:
+case 'fixed_discount':
 return `$${reward.amount} off`;
 default:
 return reward.amount.toString();
@@ -430,10 +430,10 @@ return reward.amount.toString();
 
 async applyRewardToOrder(customerId, orderId, rewardId) {
 try {
-const reward = await this.db(‘customer_rewards’)
-.where(‘id’, rewardId)
-.where(‘customerId’, customerId)
-.where(‘status’, ‘active’)
+const reward = await this.db('customer_rewards')
+.where('id', rewardId)
+.where('customerId', customerId)
+.where('status', 'active')
 .first();
 
   if (!reward) {
@@ -522,9 +522,9 @@ return {
 }
 
 async expireOldRewards() {
-const expiredRewards = await this.db(‘customer_rewards’)
-.where(‘status’, ‘active’)
-.where(‘expiresAt’, ‘<’, moment().toISOString());
+const expiredRewards = await this.db('customer_rewards')
+.where('status', 'active')
+.where('expiresAt', '<', moment().toISOString());
 
 for (const reward of expiredRewards) {
   await this.db('customer_rewards')
