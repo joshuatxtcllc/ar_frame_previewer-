@@ -9,6 +9,11 @@ require('dotenv').config();
 
 const app = express();
 
+console.log('=== Jay\'s Frames API Starting ===');
+console.log('Node version:', process.version);
+console.log('Environment:', process.env.NODE_ENV || 'development');
+console.log('Port:', process.env.PORT || 3000);
+
 // Middleware
 app.use(helmet());
 app.use(cors());
@@ -32,7 +37,7 @@ const dbConfig = {
     user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
     password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
     database: process.env.DB_NAME || process.env.MYSQLDATABASE || 'railway',
-    port: process.env.DB_PORT || process.env.MYSQLPORT || 3306
+    port: parseInt(process.env.DB_PORT || process.env.MYSQLPORT || '3306')
   },
   pool: { min: 0, max: 7 }
 };
@@ -41,49 +46,66 @@ console.log('Database configuration:', {
   host: dbConfig.connection.host,
   user: dbConfig.connection.user,
   database: dbConfig.connection.database,
-  port: dbConfig.connection.port
+  port: dbConfig.connection.port,
+  hasPassword: !!dbConfig.connection.password
 });
 
-const knex = require('knex')(dbConfig);
+let knex;
+let dbConnected = false;
 
-// Test database connection
-knex.raw('SELECT 1')
-  .then(() => {
-    console.log('✓ Database connected successfully');
+try {
+  knex = require('knex')(dbConfig);
+  console.log('✓ Knex initialized');
 
-    // Mount routes after successful database connection
-    app.use('/api/scheduling', require('./routes/scheduling')(knex));
-    console.log('✓ Routes mounted');
-  })
-  .catch(err => {
-    console.error('✗ Database connection failed:', err.message);
-    console.error('  Connection details:', {
-      host: dbConfig.connection.host,
-      user: dbConfig.connection.user,
-      database: dbConfig.connection.database
+  // Test database connection (non-blocking)
+  knex.raw('SELECT 1')
+    .then(() => {
+      console.log('✓ Database connected successfully');
+      dbConnected = true;
+
+      // Try to mount routes after successful database connection
+      try {
+        app.use('/api/scheduling', require('./routes/scheduling')(knex));
+        console.log('✓ Scheduling routes mounted');
+      } catch (error) {
+        console.error('✗ Failed to mount scheduling routes:', error.message);
+      }
+    })
+    .catch(err => {
+      console.error('✗ Database connection failed:', err.message);
+      console.error('  Connection details:', {
+        host: dbConfig.connection.host,
+        user: dbConfig.connection.user,
+        database: dbConfig.connection.database
+      });
+      console.log('  Server will continue running without database routes');
     });
-    console.log('  Server will continue running but API routes may not work');
+} catch (error) {
+  console.error('✗ Failed to initialize database:', error.message);
+  console.log('  Server will continue running without database');
+}
 
-    // Mount routes anyway but they will fail with database errors
-    app.use('/api/scheduling', require('./routes/scheduling')(knex));
-  });
-
-// Health check - always responds even if database is down
+// Health check - always responds
 app.get('/health', async (req, res) => {
   const health = {
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    database: 'unknown'
   };
 
-  // Check database connectivity
-  try {
-    await knex.raw('SELECT 1');
-    health.database = 'connected';
-  } catch (error) {
-    health.database = 'disconnected';
-    health.databaseError = error.message;
+  // Check database connectivity if knex is available
+  if (knex) {
+    try {
+      await knex.raw('SELECT 1');
+      health.database = 'connected';
+    } catch (error) {
+      health.database = 'disconnected';
+      health.databaseError = error.message;
+    }
+  } else {
+    health.database = 'not initialized';
   }
 
   res.json(health);
@@ -94,10 +116,20 @@ app.get('/', (req, res) => {
     message: "Jay's Frames API Server",
     version: '1.0.0',
     status: 'running',
+    database: dbConnected ? 'connected' : 'disconnected',
     endpoints: {
       health: '/health',
       api: '/api/scheduling'
     }
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Not found',
+    path: req.path,
+    availableEndpoints: ['/', '/health', '/api/scheduling']
   });
 });
 
@@ -113,8 +145,34 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Jay's Frames API Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log('✓ Server started successfully');
+  console.log(`✓ Listening on port ${PORT}`);
+  console.log(`✓ Health check: http://localhost:${PORT}/health`);
+  console.log('=== Server Ready ===');
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    if (knex) {
+      knex.destroy().then(() => {
+        console.log('Database connections closed');
+        process.exit(0);
+      });
+    } else {
+      process.exit(0);
+    }
+  });
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  console.error('Stack:', error.stack);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
