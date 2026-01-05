@@ -72,7 +72,7 @@ A comprehensive, production-ready business automation platform built specificall
 
 ```bash
 # Clone the repository
-git clone ttps://github.com/yourusername/jays-frames.git](https://github.com/joshuatxtcllc/ar_frame_previewer-.git
+git clone https://github.com/yourusername/jays-frames.git](https://github.com/joshuatxtcllc/ar_frame_previewer-.git
 cd ar_frame_previewer
 
 # Install dependencies
