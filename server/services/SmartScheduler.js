@@ -1,14 +1,14 @@
 // server/services/SmartScheduler.js
-const moment = require(‘moment-timezone’);
-const cron = require(‘node-cron’);
-const { EventEmitter } = require(‘events’);
+const moment = require('moment-timezone');
+const cron = require('node-cron');
+const { EventEmitter } = require('events');
 
 class SmartScheduler extends EventEmitter {
 constructor(database, config = {}) {
 super();
 this.db = database;
-this.timezone = config.timezone || ‘America/Chicago’;
-this.workingHours = config.workingHours || { start: ‘08:00’, end: ‘17:00’ };
+this.timezone = config.timezone || 'America/Chicago';
+this.workingHours = config.workingHours || { start: '08:00', end: '17:00' };
 this.workingDays = config.workingDays || [1, 2, 3, 4, 5]; // Mon-Fri
 this.maxDailyHours = config.maxDailyHours || 8;
 this.bufferTime = config.bufferTime || 30; // minutes between tasks
@@ -24,7 +24,7 @@ this.initializeScheduler();
 
 initializeScheduler() {
 // Run scheduler optimization every hour
-cron.schedule(‘0 * * * *’, () => {
+cron.schedule('0 * * * *', () => {
 this.optimizeSchedule();
 });
 
@@ -137,10 +137,10 @@ return null;
 
 generateDayTimeSlots(date, duration, existingTasks) {
 const slots = [];
-const dayStart = date.clone().hour(parseInt(this.workingHours.start.split(’:’)[0]))
-.minute(parseInt(this.workingHours.start.split(’:’)[1]));
-const dayEnd = date.clone().hour(parseInt(this.workingHours.end.split(’:’)[0]))
-.minute(parseInt(this.workingHours.end.split(’:’)[1]));
+const dayStart = date.clone().hour(parseInt(this.workingHours.start.split(':')[0]))
+.minute(parseInt(this.workingHours.start.split(':')[1]));
+const dayEnd = date.clone().hour(parseInt(this.workingHours.end.split(':')[0]))
+.minute(parseInt(this.workingHours.end.split(':')[1]));
 
 // Get tasks for this day
 const dayTasks = existingTasks.filter(task => 
@@ -228,10 +228,10 @@ return Math.min(score, 10); // Cap at 10
 async optimizeSchedule() {
 try {
 const now = moment().tz(this.timezone);
-const upcomingTasks = await this.db(‘scheduled_tasks’)
-.where(‘startTime’, ‘>’, now.toISOString())
-.where(‘status’, ‘scheduled’)
-.orderBy(‘startTime’, ‘asc’);
+const upcomingTasks = await this.db('scheduled_tasks')
+.where('startTime', '>', now.toISOString())
+.where('status', 'scheduled')
+.orderBy('startTime', 'asc');
 
   // Group tasks by complexity and priority
   const taskGroups = this.groupTasksForOptimization(upcomingTasks);
@@ -286,7 +286,7 @@ for (let i = 0; i < tasks.length - 1; i++) {
 
 canCombineTasks(task1, task2) {
 // Check if tasks can be done consecutively for efficiency
-const timeDiff = moment(task2.startTime).diff(moment(task1.endTime), ‘hours’);
+const timeDiff = moment(task2.startTime).diff(moment(task1.endTime), 'hours');
 return timeDiff <= 2 && task1.complexity === task2.complexity;
 }
 
@@ -301,9 +301,9 @@ for (const conflict of conflicts[0]) {
 
 async resolveConflict(conflict) {
 // Reschedule lower priority task
-const conflictingTasks = await this.db(‘scheduled_tasks’)
-.whereIn(‘orderId’, [conflict.orderId, conflict.conflictOrderId])
-.orderBy(‘priority’, ‘asc’);
+const conflictingTasks = await this.db('scheduled_tasks')
+.whereIn('orderId', [conflict.orderId, conflict.conflictOrderId])
+.orderBy('priority', 'asc');
 
 const taskToReschedule = conflictingTasks[1]; // Lower priority
 
@@ -334,8 +334,8 @@ if (newSlot) {
 }
 
 async assessDailyWorkload() {
-const today = moment().tz(this.timezone).startOf(‘day’);
-const tomorrow = today.clone().add(1, ‘day’);
+const today = moment().tz(this.timezone).startOf('day');
+const tomorrow = today.clone().add(1, 'day');
 
 const todayTasks = await this.db('scheduled_tasks')
   .whereBetween('startTime', [today.toISOString(), tomorrow.toISOString()])
@@ -363,15 +363,15 @@ return workloadAssessment;
 
 getWorkloadRecommendation(totalHours, complexTasks) {
 if (totalHours > this.maxDailyHours * 1.2) {
-return ‘OVERLOADED - Consider rescheduling non-urgent tasks’;
+return 'OVERLOADED - Consider rescheduling non-urgent tasks';
 } else if (totalHours > this.maxDailyHours) {
-return ‘HIGH - Monitor for delays’;
+return 'HIGH - Monitor for delays';
 } else if (complexTasks > 2) {
-return ‘COMPLEX_HEAVY - Space out complex tasks’;
+return 'COMPLEX_HEAVY - Space out complex tasks';
 } else if (totalHours < this.maxDailyHours * 0.6) {
-return ‘LIGHT - Good opportunity for catch-up or maintenance’;
+return 'LIGHT - Good opportunity for catch-up or maintenance';
 }
-return ‘OPTIMAL - Well balanced workload’;
+return 'OPTIMAL - Well balanced workload';
 }
 
 isWorkingDay(date) {
@@ -379,8 +379,8 @@ return this.workingDays.includes(date.day());
 }
 
 async updateTaskProgress(orderId, actualHours, status) {
-await this.db(‘scheduled_tasks’)
-.where(‘orderId’, orderId)
+await this.db('scheduled_tasks')
+.where('orderId', orderId)
 .update({
 actualHours,
 status,

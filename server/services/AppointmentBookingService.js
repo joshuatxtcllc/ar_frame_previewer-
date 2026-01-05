@@ -1,13 +1,13 @@
 // server/services/AppointmentBookingService.js
-const moment = require(‘moment-timezone’);
-const { EventEmitter } = require(‘events’);
+const moment = require('moment-timezone');
+const { EventEmitter } = require('events');
 
 class AppointmentBookingService extends EventEmitter {
 constructor(database, smartScheduler, config = {}) {
 super();
 this.db = database;
 this.scheduler = smartScheduler;
-this.timezone = config.timezone || ‘America/Chicago’;
+this.timezone = config.timezone || 'America/Chicago';
 this.appointmentTypes = {
 consultation: { duration: 1, bufferTime: 15, capacity: 1 },
 pickup: { duration: 0.25, bufferTime: 5, capacity: 4 },
@@ -27,7 +27,7 @@ async getAvailableSlots(appointmentType, preferredDate = null, daysAhead = 14) {
 try {
 const startDate = preferredDate ?
 moment(preferredDate).tz(this.timezone) :
-moment().tz(this.timezone).add(1, ‘day’);
+moment().tz(this.timezone).add(1, 'day');
 
   const endDate = startDate.clone().add(daysAhead, 'days');
   const appointmentConfig = this.appointmentTypes[appointmentType];
@@ -137,8 +137,8 @@ return slots;
 }
 
 async calculateDayWorkload(date) {
-const dayStart = date.clone().startOf(‘day’);
-const dayEnd = date.clone().endOf(‘day’);
+const dayStart = date.clone().startOf('day');
+const dayEnd = date.clone().endOf('day');
 
 // Get scheduled production tasks
 const tasks = await this.db('scheduled_tasks')
@@ -172,10 +172,10 @@ return {
 }
 
 categorizeWorkload(utilization) {
-if (utilization < this.workloadThresholds.light) return ‘light’;
-if (utilization < this.workloadThresholds.normal) return ‘normal’;
-if (utilization < this.workloadThresholds.heavy) return ‘heavy’;
-return ‘overloaded’;
+if (utilization < this.workloadThresholds.light) return 'light';
+if (utilization < this.workloadThresholds.normal) return 'normal';
+if (utilization < this.workloadThresholds.heavy) return 'heavy';
+return 'overloaded';
 }
 
 calculateRecommendationScore(datetime, workload, appointmentConfig) {
@@ -221,9 +221,9 @@ return workloadPriority[b.workloadLevel] - workloadPriority[a.workloadLevel];
 return a.datetime.diff(b.datetime);
 })
 .map(slot => ({
-…slot,
+...slot,
 datetime: slot.datetime.format(),
-formattedTime: slot.datetime.format(‘dddd, MMMM Do, h:mm A’),
+formattedTime: slot.datetime.format('dddd, MMMM Do, h:mm A'),
 workloadIndicator: this.getWorkloadIndicator(slot.workloadLevel),
 isRecommended: slot.recommendationScore >= 80
 }));
@@ -231,10 +231,10 @@ isRecommended: slot.recommendationScore >= 80
 
 getWorkloadIndicator(workloadLevel) {
 const indicators = {
-light: { color: ‘green’, text: ‘Light day - Great availability’, icon: ‘🟢’ },
-normal: { color: ‘blue’, text: ‘Normal day - Good availability’, icon: ‘🔵’ },
-heavy: { color: ‘orange’, text: ‘Busy day - Limited availability’, icon: ‘🟠’ },
-overloaded: { color: ‘red’, text: ‘Very busy - May experience delays’, icon: ‘🔴’ }
+light: { color: 'green', text: 'Light day - Great availability', icon: '🟢' },
+normal: { color: 'blue', text: 'Normal day - Good availability', icon: '🔵' },
+heavy: { color: 'orange', text: 'Busy day - Limited availability', icon: '🟠' },
+overloaded: { color: 'red', text: 'Very busy - May experience delays', icon: '🔴' }
 };
 return indicators[workloadLevel];
 }
@@ -246,8 +246,8 @@ customerId,
 type,
 datetime,
 duration,
-notes = ‘’,
-contactMethod = ‘email’,
+notes = '',
+contactMethod = 'email',
 reminderPreferences = { hours: [24, 2] }
 } = appointmentData;
 
@@ -333,11 +333,11 @@ for (const hours of reminderPrefs.hours) {
 }
 
 generateConfirmationNumber(appointmentId) {
-const prefix = ‘JF’; // Jay’s Frames
-const timestamp = moment().format(‘MMDD’);
-const hash = require(‘crypto’).createHash(‘md5’)
+const prefix = 'JF'; // Jay's Frames
+const timestamp = moment().format('MMDD');
+const hash = require('crypto').createHash('md5')
 .update(appointmentId)
-.digest(‘hex’)
+.digest('hex')
 .substring(0, 4)
 .toUpperCase();
 return `${prefix}${timestamp}${hash}`;
@@ -348,10 +348,10 @@ const workload = await this.calculateDayWorkload(appointmentDate);
 return {
 utilizationBefore: workload.utilization,
 newUtilization: workload.utilization + (0.5 / this.scheduler.maxDailyHours),
-impact: workload.utilization > 0.8 ? ‘high’ : ‘low’,
+impact: workload.utilization > 0.8 ? 'high' : 'low',
 recommendation: workload.utilization > 0.9 ?
-‘Consider rescheduling non-urgent production tasks’ :
-‘No adjustments needed’
+'Consider rescheduling non-urgent production tasks' :
+'No adjustments needed'
 };
 }
 
@@ -369,10 +369,10 @@ await this.db('daily_workload_cache')
 
 }
 
-async rescheduleAppointment(appointmentId, newDatetime, reason = ‘’) {
+async rescheduleAppointment(appointmentId, newDatetime, reason = '') {
 try {
-const appointment = await this.db(‘appointments’)
-.where(‘id’, appointmentId)
+const appointment = await this.db('appointments')
+.where('id', appointmentId)
 .first();
 
   if (!appointment) {

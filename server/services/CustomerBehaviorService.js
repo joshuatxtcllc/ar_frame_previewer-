@@ -1,15 +1,15 @@
 // server/services/CustomerBehaviorService.js
-const tf = require(’@tensorflow/tfjs-node’);
-const { Matrix } = require(‘ml-matrix’);
-const ss = require(‘simple-statistics’);
-const moment = require(‘moment-timezone’);
-const { EventEmitter } = require(‘events’);
+const tf = require('@tensorflow/tfjs-node');
+const { Matrix } = require('ml-matrix');
+const ss = require('simple-statistics');
+const moment = require('moment-timezone');
+const { EventEmitter } = require('events');
 
 class CustomerBehaviorService extends EventEmitter {
 constructor(database, config = {}) {
 super();
 this.db = database;
-this.timezone = config.timezone || ‘America/Chicago’;
+this.timezone = config.timezone || 'America/Chicago';
 
 // Feature weights for recommendation algorithm
 this.featureWeights = {
@@ -39,10 +39,10 @@ this.isModelTrained = false;
 
 async analyzeCustomerBehavior(customerId) {
 try {
-// Get customer’s complete order history
-const orders = await this.db(‘orders’)
-.where(‘customerId’, customerId)
-.orderBy(‘createdAt’, ‘desc’);
+// Get customer's complete order history
+const orders = await this.db('orders')
+.where('customerId', customerId)
+.orderBy('createdAt', 'desc');
 
   if (orders.length === 0) {
     return this.getNewCustomerProfile(customerId);
@@ -91,7 +91,7 @@ const orders = await this.db(‘orders’)
 }
 
 calculateOrderFrequency(orders) {
-if (orders.length < 2) return { frequency: ‘new’, ordersPerYear: 0 };
+if (orders.length < 2) return { frequency: 'new', ordersPerYear: 0 };
 
 const firstOrder = moment(orders[orders.length - 1].createdAt);
 const lastOrder = moment(orders[0].createdAt);
@@ -119,8 +119,8 @@ const values = orders.map(o => parseFloat(o.totalAmount));
 return {
 average: Math.round(ss.mean(values) * 100) / 100,
 median: Math.round(ss.median(values) * 100) / 100,
-min: Math.min(…values),
-max: Math.max(…values),
+min: Math.min(...values),
+max: Math.max(...values),
 standardDeviation: Math.round(ss.standardDeviation(values) * 100) / 100
 };
 }
@@ -210,9 +210,9 @@ return {
 
 async calculateDecisionSpeed(customerId, orders) {
 // Get inquiries/quotes for this customer
-const inquiries = await this.db(‘customer_inquiries’)
-.where(‘customerId’, customerId)
-.orderBy(‘createdAt’, ‘desc’);
+const inquiries = await this.db('customer_inquiries')
+.where('customerId', customerId)
+.orderBy('createdAt', 'desc');
 
 if (inquiries.length === 0) return null;
 
@@ -262,7 +262,7 @@ return {
 }
 
 calculateRecencyScore(orders) {
-const daysSinceLastOrder = moment().diff(moment(orders[0].createdAt), ‘days’);
+const daysSinceLastOrder = moment().diff(moment(orders[0].createdAt), 'days');
 
 if (daysSinceLastOrder <= 30) return 1.0;
 if (daysSinceLastOrder <= 90) return 0.8;
@@ -292,11 +292,11 @@ return 0.4;
 }
 
 getLoyaltyTier(score) {
-if (score >= 80) return ‘champion’;
-if (score >= 60) return ‘loyal’;
-if (score >= 40) return ‘potential’;
-if (score >= 20) return ‘new’;
-return ‘at_risk’;
+if (score >= 80) return 'champion';
+if (score >= 60) return 'loyal';
+if (score >= 40) return 'potential';
+if (score >= 20) return 'new';
+return 'at_risk';
 }
 
 extractArtworkTypePreferences(orders) {
@@ -592,7 +592,7 @@ return reasons;
 }
 
 async storeBehaviorProfile(profile) {
-await this.db(‘customer_behavior_profiles’)
+await this.db('customer_behavior_profiles')
 .insert({
 customerId: profile.customerId,
 patterns: JSON.stringify(profile.patterns),
@@ -601,7 +601,7 @@ lifetimeValue: JSON.stringify(profile.lifetimeValue),
 nextPurchasePrediction: JSON.stringify(profile.nextPurchasePrediction),
 lastUpdated: profile.lastUpdated
 })
-.onConflict(‘customerId’)
+.onConflict('customerId')
 .merge();
 }
 
@@ -609,10 +609,10 @@ async getNewCustomerProfile(customerId) {
 return {
 customerId,
 patterns: {
-orderFrequency: { frequency: ‘new’, ordersPerYear: 0, totalOrders: 0 },
+orderFrequency: { frequency: 'new', ordersPerYear: 0, totalOrders: 0 },
 isNewCustomer: true
 },
-segments: [‘new_customer’],
+segments: ['new_customer'],
 lifetimeValue: { historicalValue: 0, predictedLifetimeValue: 0 },
 nextPurchasePrediction: null
 };
