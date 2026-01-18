@@ -343,30 +343,25 @@ npm run test:watch
 
 ### Deploy to Railway
 
+This project is fully configured for Railway deployment with automated builds and health checks.
+
+**📖 [Complete Railway Deployment Guide](./RAILWAY_DEPLOYMENT.md)**
+
+#### Quick Start:
+
 1. **Connect your GitHub repository** to Railway
-1. **Set environment variables** in Railway dashboard
-1. **Deploy automatically** on git push
+2. **Add MySQL database** from Railway dashboard
+3. **Set environment variables** (see [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md))
+4. **Deploy automatically** - Railway detects configuration and deploys
+5. **Run migrations**: `railway run npm run migrate`
 
-Or use Railway CLI:
+**Configuration Files:**
+- `railway.json` - Railway project configuration
+- `nixpacks.toml` - Build configuration (Node.js 20)
+- `.railwayignore` - Files to exclude from deployment
+- `Procfile` - Fallback start command
 
-```bash
-# Install Railway CLI
-npm i -g @railway/cli
-
-# Login
-railway login
-
-# Initialize project
-railway init
-
-# Add environment variables
-railway variables set DB_HOST=your_host
-railway variables set DB_USER=your_user
-# ... set all required variables
-
-# Deploy
-railway up
-```
+**Health Check:** Your app includes a `/health` endpoint for Railway monitoring
 
 ### Deploy with Docker
 
